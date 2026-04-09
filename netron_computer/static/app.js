@@ -1,6 +1,9 @@
 var viewport = document.querySelector("#viewport");
+var screenStage = document.querySelector("#screenStage");
 var screenImage = document.querySelector("#screenImage");
 var screenOverlay = document.querySelector("#screenOverlay");
+var screenOverlayText = document.querySelector("#screenOverlayText");
+var reconnectButton = document.querySelector("#reconnectButton");
 var keyboardBridge = document.querySelector("#keyboardBridge");
 var audioPlayer = document.querySelector("#audioPlayer");
 var soundButton = document.querySelector("#soundButton");
@@ -49,8 +52,21 @@ function isConnected() {
   return state.ws && state.ws.readyState === WebSocket.OPEN;
 }
 
-function showOverlay(text) {
-  screenOverlay.textContent = text;
+function showOverlay(text, showReconnect) {
+  if (screenOverlayText) {
+    screenOverlayText.textContent = text;
+  } else {
+    screenOverlay.textContent = text;
+  }
+
+  if (reconnectButton) {
+    if (showReconnect) {
+      reconnectButton.classList.remove("hidden");
+    } else {
+      reconnectButton.classList.add("hidden");
+    }
+  }
+
   screenOverlay.classList.remove("hidden");
 }
 
@@ -66,7 +82,7 @@ function connect() {
   var ws = new WebSocket(websocketUrl());
   ws.binaryType = "blob";
   state.ws = ws;
-  showOverlay("Connecting to the remote screen...");
+  showOverlay("Connecting to the remote screen...", false);
 
   ws.addEventListener("message", function(event) {
     if (typeof event.data === "string") {
@@ -94,12 +110,39 @@ function connect() {
     }
 
     state.ws = null;
-    showOverlay("Connection lost. Reload the page.");
+    showOverlay("Connection lost.", true);
   });
 
   ws.addEventListener("error", function() {
-    showOverlay("Connection error.");
+    showOverlay("Connection error.", true);
   });
+}
+
+function reconnect(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  if (state.ws) {
+    try {
+      state.ws.close();
+    } catch (error) {
+      // Ignore close errors during reconnect.
+    }
+    state.ws = null;
+  }
+
+  if (state.lastObjectUrl) {
+    URL.revokeObjectURL(state.lastObjectUrl);
+    state.lastObjectUrl = null;
+  }
+
+  if (state.soundEnabled) {
+    stopAudioStream();
+  }
+
+  connect();
 }
 
 function handleServerMessage(raw) {
@@ -136,7 +179,7 @@ function handleServerMessage(raw) {
   }
 
   if (message.type === "error") {
-    showOverlay(message.message);
+    showOverlay(message.message, false);
   }
 }
 
@@ -667,7 +710,7 @@ function clamp(value, minValue, maxValue) {
 }
 
 function getDrawArea() {
-  var rect = viewport.getBoundingClientRect();
+  var rect = (screenStage || viewport).getBoundingClientRect();
   var screenAspect = state.screenWidth / state.screenHeight;
   var rectAspect = rect.width / rect.height;
 
@@ -692,6 +735,10 @@ function getDrawArea() {
     width: drawWidth,
     height: drawHeight,
   };
+}
+
+function isPointInsideDrawArea(clientX, clientY) {
+  return !!getNormalizedPoint(clientX, clientY);
 }
 
 function positionCursorDot() {
@@ -848,9 +895,17 @@ function handleTwoFingerScroll(deltaY) {
 }
 
 function onTouchStart(event) {
+  var firstTouch;
+
   requestFullscreenOnce();
 
   if (!event.touches || !event.touches.length) {
+    return;
+  }
+
+  firstTouch = event.touches[0];
+  if (!isPointInsideDrawArea(firstTouch.clientX, firstTouch.clientY)) {
+    state.touchGesture = null;
     return;
   }
 
@@ -1071,6 +1126,10 @@ if (soundButton) {
 
 if (monitorButton) {
   monitorButton.addEventListener("click", cycleMonitor, false);
+}
+
+if (reconnectButton) {
+  reconnectButton.addEventListener("click", reconnect, false);
 }
 
 if ("ontouchstart" in window) {

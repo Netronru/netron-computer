@@ -1,0 +1,318 @@
+:root {
+  --bg: #050505;
+  --card: rgba(21, 21, 21, 0.94);
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #f4f4f4;
+  --muted: #a9a9a9;
+  --accent: #ffffff;
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #1d1d1d, #050505 70%);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+body.mobile-shell {
+  touch-action: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.shell-screen,
+.viewer-screen {
+  position: fixed;
+  inset: 0;
+}
+
+.shell-screen {
+  display: none;
+  place-items: center;
+  padding: 22px;
+}
+
+.shell-screen.active {
+  display: grid;
+}
+
+.connect-card,
+.auth-card,
+.settings-card {
+  width: min(520px, 92vw);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--card);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.connect-card {
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+  text-align: center;
+  justify-items: center;
+}
+
+.brand-mark {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #000000;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.connect-title,
+.settings-header h2,
+.auth-card h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.connect-copy,
+.connect-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.connect-button,
+.primary-button,
+.secondary-button {
+  min-width: 210px;
+  min-height: 62px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.connect-button,
+.primary-button {
+  background: #ffffff;
+  color: #000000;
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.shell-icon-button {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(18, 18, 18, 0.86);
+  color: #ffffff;
+  padding: 0;
+}
+
+.shell-icon-button svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+
+.shell-settings-button,
+.shell-settings-viewer {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 6;
+}
+
+.auth-sheet,
+.settings-sheet {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.auth-card,
+.settings-card {
+  padding: 22px;
+}
+
+.auth-card {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-label,
+.settings-label {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.auth-card input,
+.settings-input,
+.settings-select {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 18px;
+}
+
+.auth-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.close-sheet-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+.settings-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  margin: 14px 0;
+}
+
+.settings-switch input {
+  width: 20px;
+  height: 20px;
+}
+
+.viewer-screen {
+  background: #000000;
+}
+
+.mobile-viewport {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000000;
+  touch-action: none;
+}
+
+#mobileScreenImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.mobile-keyboard-bridge {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  resize: none;
+}
+
+.mobile-audio-player {
+  display: none;
+}
+
+.mobile-cursor-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.mobile-cursor-dot.hidden {
+  opacity: 0;
+}
+
+.mobile-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.mobile-controls {
+  position: fixed;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 7;
+  display: flex;
+  gap: 10px;
+}
+
+.mobile-controls.right {
+  right: max(14px, env(safe-area-inset-right));
+}
+
+.mobile-controls.left {
+  left: max(14px, env(safe-area-inset-left));
+}
+
+.dock-button.active {
+  background: rgba(255, 255, 255, 0.96);
+  color: #000000;
+}
+
+@media (orientation: portrait) {
+  .connect-card::after {
+    content: "Rotate your phone to landscape for the best experience.";
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.35;
+  }
+}

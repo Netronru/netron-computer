@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 import argparse
-import secrets
-from pathlib import Path
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-ENV_PATH = ROOT_DIR / ".env"
+from netron_computer.config_store import ENV_PATH, rotate_session_secret, save_env
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,42 +17,17 @@ def parse_args() -> argparse.Namespace:
     )
     return parser.parse_args()
 
-
-def load_env_lines() -> list[str]:
-    if ENV_PATH.exists():
-        return ENV_PATH.read_text(encoding="utf-8").splitlines()
-    return []
-
-
-def set_key(lines: list[str], key: str, value: str) -> list[str]:
-    prefix = key + "="
-    updated = []
-    replaced = False
-
-    for line in lines:
-        if line.startswith(prefix):
-            updated.append(prefix + value)
-            replaced = True
-        else:
-            updated.append(line)
-
-    if not replaced:
-        updated.append(prefix + value)
-
-    return updated
-
-
 def main() -> None:
     args = parse_args()
-    lines = load_env_lines()
-
-    lines = set_key(lines, "AUTH_USERNAME", args.username)
-    lines = set_key(lines, "AUTH_PASSWORD", args.password)
+    save_env(
+        {
+            "AUTH_USERNAME": args.username,
+            "AUTH_PASSWORD": args.password,
+        }
+    )
 
     if args.rotate_session_secret:
-        lines = set_key(lines, "SESSION_SECRET", secrets.token_urlsafe(32))
-
-    ENV_PATH.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+        rotate_session_secret()
 
     print("Updated credentials in", ENV_PATH)
     print("AUTH_USERNAME =", args.username)

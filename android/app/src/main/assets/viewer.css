@@ -1,0 +1,157 @@
+:root {
+  --bg: #000000;
+  --text: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body.viewer-shell {
+  touch-action: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.viewer-surface {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+  touch-action: none;
+}
+
+.screen-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  overflow: hidden;
+}
+
+#screenImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.keyboard-bridge {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  resize: none;
+}
+
+.audio-player {
+  display: none;
+}
+
+.cursor-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.cursor-dot.hidden {
+  opacity: 0;
+}
+
+.screen-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.58);
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.screen-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dock {
+  position: fixed;
+  bottom: 14px;
+  z-index: 8;
+  display: flex;
+  gap: 10px;
+}
+
+.dock.hidden {
+  display: none;
+}
+
+.dock-right {
+  right: 14px;
+}
+
+.dock-left {
+  left: 14px;
+}
+
+.dock-button {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(18, 18, 18, 0.86);
+  color: #ffffff;
+  padding: 0;
+}
+
+.dock-button.active {
+  background: rgba(255, 255, 255, 0.96);
+  color: #000000;
+}
+
+.dock-button svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+
+@media (max-width: 950px), (max-height: 520px) {
+  .screen-stage {
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+}

@@ -39,6 +39,14 @@ body.viewer-page {
   cursor: none;
 }
 
+.screen-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
 #screenImage {
   width: 100%;
   height: 100%;
@@ -136,9 +144,33 @@ body.viewer-page {
   background: rgba(0, 0, 0, 0.68);
 }
 
+.viewer-overlay-card {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  max-width: min(560px, 100%);
+}
+
 .viewer-overlay.hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+.overlay-button {
+  min-width: 180px;
+  min-height: 56px;
+  padding: 0 22px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #000000;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.overlay-button.hidden {
+  display: none;
 }
 
 .login-page {
@@ -212,6 +244,13 @@ body.viewer-page {
 }
 
 @media (max-width: 768px) {
+  .screen-stage {
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
   .floating-controls {
     right: 12px;
     bottom: 12px;
@@ -238,6 +277,12 @@ body.viewer-page {
 
   .viewer-overlay {
     font-size: 20px;
+  }
+
+  .overlay-button {
+    min-width: 164px;
+    min-height: 54px;
+    font-size: 19px;
   }
 
   .login-card {

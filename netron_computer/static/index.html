@@ -12,7 +12,9 @@
   </head>
   <body class="viewer-page">
     <main id="viewport" class="viewer" aria-label="Remote screen">
-      <img id="screenImage" alt="Screen stream" draggable="false" />
+      <div id="screenStage" class="screen-stage">
+        <img id="screenImage" alt="Screen stream" draggable="false" />
+      </div>
       <textarea
         id="keyboardBridge"
         class="keyboard-bridge"
@@ -24,7 +26,10 @@
       <audio id="audioPlayer" class="audio-player" playsinline></audio>
       <div id="cursorDot" class="cursor-dot hidden" aria-hidden="true"></div>
       <div id="screenOverlay" class="viewer-overlay">
-        Connecting to the remote screen...
+        <div class="viewer-overlay-card">
+          <div id="screenOverlayText">Connecting to the remote screen...</div>
+          <button id="reconnectButton" class="overlay-button hidden" type="button">Reconnect</button>
+        </div>
       </div>
     </main>
     <div id="leftControls" class="floating-controls floating-controls-left hidden">

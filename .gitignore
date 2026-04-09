@@ -2,3 +2,14 @@
 __pycache__/
 *.pyc
 .env
+build/
+dist/
+*.spec
+*.log
+*.egg-info/
+android/.gradle/
+android/app/build/
+android/build/
+android/keystore.properties
+android/*.jks
+android/*.keystore

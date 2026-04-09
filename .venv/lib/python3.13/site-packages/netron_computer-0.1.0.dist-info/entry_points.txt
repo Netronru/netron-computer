@@ -1,2 +1,4 @@
 [console_scripts]
 netron-computer = netron_computer.app:main
+netron-computer-desktop = netron_computer.desktop_app:main
+netron-computer-set-auth = netron_computer.configure_auth:main

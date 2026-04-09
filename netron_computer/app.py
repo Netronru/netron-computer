@@ -14,10 +14,11 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, WebSocket, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from mss import mss
@@ -37,10 +38,12 @@ class Settings:
     jpeg_quality: int = min(95, max(20, int(os.getenv("JPEG_QUALITY", "45"))))
     max_frame_width: int = max(640, int(os.getenv("MAX_FRAME_WIDTH", "1024")))
     monitor_index: int = max(1, int(os.getenv("MONITOR_INDEX", "1")))
+    language: str = os.getenv("LANGUAGE", "en").strip().lower() or "en"
     auth_username: str = os.getenv("AUTH_USERNAME", "admin")
     auth_password: str = os.getenv("AUTH_PASSWORD", "admin")
     session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "netron_computer_session")
     session_secret: str = os.getenv("SESSION_SECRET", "change-this-netron-computer-secret")
+    enable_audio: bool = os.getenv("ENABLE_AUDIO", "1").strip().lower() not in {"0", "false", "no", "off"}
     audio_source: str = os.getenv("AUDIO_SOURCE", "").strip()
     audio_sample_rate: int = max(16000, int(os.getenv("AUDIO_SAMPLE_RATE", "48000")))
     audio_chunk_ms: int = min(100, max(10, int(os.getenv("AUDIO_CHUNK_MS", "20"))))
@@ -281,6 +284,12 @@ class RemoteDesktopStore:
 settings = Settings()
 desktop_store = RemoteDesktopStore(settings)
 app = FastAPI(title="netron-computer")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -351,6 +360,10 @@ def create_session_token(username: str) -> str:
     )
 
 
+def create_api_token(username: str) -> str:
+    return create_session_token(username)
+
+
 def decode_base64url(value: str) -> bytes:
     padding = "=" * (-len(value) % 4)
     return base64.urlsafe_b64decode(value + padding)
@@ -379,19 +392,59 @@ def is_session_token_valid(token: str | None) -> bool:
     return hmac.compare_digest(signature, expected_signature)
 
 
+def get_request_token(request: Request) -> str | None:
+    query_token = request.query_params.get("token")
+    if query_token:
+        return query_token
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    return request.cookies.get(settings.session_cookie_name)
+
+
 def is_request_authenticated(request: Request) -> bool:
-    return is_session_token_valid(request.cookies.get(settings.session_cookie_name))
+    return is_session_token_valid(get_request_token(request))
 
 
 def is_websocket_authenticated(websocket: WebSocket) -> bool:
+    token = websocket.query_params.get("token")
+    if token:
+        return is_session_token_valid(token)
     return is_session_token_valid(websocket.cookies.get(settings.session_cookie_name))
+
+
+def build_mobile_shell_url(request: Request) -> str:
+    base_url = str(request.base_url).rstrip("/")
+    return base_url + "/mobile"
+
+
+def build_connect_targets(request: Request) -> list[str]:
+    host = request.url.hostname or "127.0.0.1"
+    base_port = settings.port
+    ports = [base_port]
+    for offset in (1, -1, 2, -2, 10):
+        candidate = base_port + offset
+        if 1 <= candidate <= 65535 and candidate not in ports:
+            ports.append(candidate)
+    return [f"http://{host}:{port}" for port in ports]
 
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
 
-    if path.startswith("/static") or path == "/login":
+    if path.startswith("/static") or path in {
+        "/login",
+        "/mobile",
+        "/manifest.webmanifest",
+        "/service-worker.js",
+        "/api/health",
+        "/api/public-config",
+        "/api/auth/login",
+    }:
+        return await call_next(request)
+
+    if path not in {"/", "/logout"}:
         return await call_next(request)
 
     if not is_request_authenticated(request):
@@ -410,6 +463,21 @@ async def login_page(request: Request):
     if is_request_authenticated(request):
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     return FileResponse(STATIC_DIR / "login.html")
+
+
+@app.get("/mobile")
+async def mobile_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "mobile.html")
+
+
+@app.get("/manifest.webmanifest")
+async def manifest() -> FileResponse:
+    return FileResponse(STATIC_DIR / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/service-worker.js")
+async def service_worker() -> FileResponse:
+    return FileResponse(STATIC_DIR / "service-worker.js", media_type="application/javascript")
 
 
 @app.post("/login")
@@ -450,6 +518,66 @@ async def health() -> JSONResponse:
             "fps": settings.fps,
             "session_type": os.getenv("XDG_SESSION_TYPE", "unknown"),
             "audio_source": settings.audio_source or "auto",
+        }
+    )
+
+
+@app.get("/api/health")
+async def api_health() -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "ok",
+            "app": "netron-computer",
+            "port": settings.port,
+            "fps": settings.fps,
+            "session_type": os.getenv("XDG_SESSION_TYPE", "unknown"),
+            "audio_enabled": settings.enable_audio,
+            "audio_source": settings.audio_source or "auto",
+            "language": settings.language,
+        }
+    )
+
+
+@app.get("/api/public-config")
+async def public_config(request: Request) -> JSONResponse:
+    parsed_base = urlparse(str(request.base_url))
+    default_host = parsed_base.hostname or "127.0.0.1"
+    return JSONResponse(
+        {
+            "app": "netron-computer",
+            "default_host": default_host,
+            "default_port": settings.port,
+            "language": settings.language,
+            "audio_enabled": settings.enable_audio,
+            "auto_search_ports": build_connect_targets(request),
+            "mobile_shell_url": build_mobile_shell_url(request),
+            "supported_languages": ["en", "ru", "es"],
+        }
+    )
+
+
+@app.post("/api/auth/login")
+async def api_login(request: Request) -> JSONResponse:
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "message": "Invalid JSON body."}, status_code=400)
+
+    username = str(payload.get("username", ""))
+    password = str(payload.get("password", ""))
+
+    if username != settings.auth_username or password != settings.auth_password:
+        return JSONResponse(
+            {"ok": False, "message": "Invalid username or password."},
+            status_code=401,
+        )
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "token": create_api_token(username),
+            "audio_enabled": settings.enable_audio,
+            "language": settings.language,
         }
     )
 
@@ -540,6 +668,10 @@ async def websocket_audio_endpoint(websocket: WebSocket) -> None:
         await websocket.close(code=4401)
         return
 
+    if not settings.enable_audio:
+        await websocket.close(code=4403)
+        return
+
     await websocket.accept()
 
     audio_source = resolve_audio_source()
@@ -622,8 +754,14 @@ async def websocket_audio_endpoint(websocket: WebSocket) -> None:
             await websocket.close()
 
 
-@app.get("/audio-stream")
-async def audio_stream() -> StreamingResponse:
+@app.get("/audio-stream", response_model=None)
+async def audio_stream(request: Request):
+    if not is_request_authenticated(request):
+        return JSONResponse({"ok": False, "message": "Unauthorized."}, status_code=401)
+
+    if not settings.enable_audio:
+        return JSONResponse({"ok": False, "message": "Audio streaming is disabled."}, status_code=403)
+
     audio_source = resolve_audio_source()
 
     ffmpeg_command = [

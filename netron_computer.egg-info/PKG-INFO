@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: netron-computer
-Version: 0.1.0
-Summary: Локальный браузерный экран компьютера с управлением через WebSocket.
+Version: 1.4
+Summary: Local browser-based computer screen streaming with WebSocket control.
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: fastapi<1.0,>=0.116
@@ -13,40 +13,120 @@ Requires-Dist: uvicorn[standard]<1.0,>=0.35
 
 # netron-computer
 
-Локальный сервер, который показывает экран компьютера в браузере на порту `3001` и позволяет управлять мышью через большой сенсорный экран в стиле терминала.
+English, Russian, and Spanish documentation for a local browser-based remote screen and touchpad controller.
 
-## Что умеет
+---
 
-- Транслирует выбранный монитор в браузер как поток JPEG-кадров.
-- После авторизации показывает только экран, без лишних панелей.
-- Поддерживает простой тач-режим: ведете пальцем по экрану и курсор движется, короткий тап делает левый клик.
-- Защищает доступ логином и паролем `admin / admin`.
-- Умеет по кнопке `Звук` передавать системный звук компьютера в браузер.
+## English
 
-## Быстрый запуск
+### Overview
+
+`netron-computer` is a local self-hosted remote desktop viewer designed for quick control of one Linux computer from a tablet, phone, or another computer over a local network.
+
+It focuses on:
+
+- local browser access on port `3001`
+- a simple fullscreen viewer UI
+- touchpad-like mouse control
+- optional text input from the browser
+- optional audio forwarding
+- lightweight login protection
+- support for switching between multiple monitors
+
+This project is best suited for trusted home or office LAN usage.
+
+### Main features
+
+- Streams the selected monitor to a browser as JPEG frames.
+- Supports fullscreen-style viewing on mobile and tablet browsers.
+- Supports touchpad-style control:
+  - one-finger move for cursor movement
+  - one-finger tap for left click
+  - two-finger tap for right click
+  - two-finger swipe for scroll
+- Shows a local white cursor dot on the client UI.
+- Provides a manual `Keyboard` button to open the on-screen keyboard only when needed.
+- Provides a `Sound` button to start or stop computer audio playback in the browser.
+- Provides a `Display` button when multiple monitors are connected.
+- Protects access with username/password authentication.
+- Allows changing credentials through `.env` or a dedicated CLI command.
+
+### Requirements
+
+- Linux desktop session
+- Python `3.11+`
+- X11 is strongly recommended for best capture and input behavior
+- PipeWire or PulseAudio is recommended for system audio forwarding
+- `ffmpeg` installed and available in `PATH`
+
+### Installation
 
 ```bash
+cd /home/netronru/Documents/Project/netron_computer
 python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .
-netron-computer
+./.venv/bin/python -m ensurepip --upgrade
+./.venv/bin/pip install -e .
+cp .env.example .env
 ```
 
-После запуска откройте:
+### Run
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer
+```
+
+Open locally:
 
 ```text
 http://127.0.0.1:3001
 ```
 
-Чтобы открыть сайт с другого устройства в локальной сети, используйте IP этого компьютера:
+Open from another device on the same local network:
 
 ```text
-http://<локальный-ip>:3001
+http://YOUR_COMPUTER_LOCAL_IP:3001
 ```
 
-## Настройки
+### Default login
 
-Скопируйте `.env.example` в `.env` и при желании поменяйте параметры:
+```text
+username: admin
+password: admin
+```
+
+### Changing username and password
+
+There are two supported ways.
+
+#### Option 1: edit `.env`
+
+```env
+AUTH_USERNAME=your_login
+AUTH_PASSWORD=your_password
+```
+
+Restart the server after editing the file.
+
+#### Option 2: use the helper command
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass
+```
+
+If you also want to rotate the cookie signing secret:
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass --rotate-session-secret
+```
+
+Then restart the app.
+
+### Configuration
+
+Example `.env`:
 
 ```env
 HOST=0.0.0.0
@@ -63,15 +143,751 @@ AUDIO_SAMPLE_RATE=48000
 AUDIO_CHUNK_MS=20
 ```
 
-Если автоматический выбор берет не тот звук, задайте monitor-источник вручную, например:
+### Configuration reference
+
+- `HOST`
+  Server bind address. `0.0.0.0` exposes the service to the local network.
+- `PORT`
+  HTTP port. Default: `3001`.
+- `FPS`
+  Target screen stream frame rate. Default: `30`.
+- `JPEG_QUALITY`
+  JPEG compression quality for screen frames. Lower values reduce bandwidth but also reduce image quality.
+- `MAX_FRAME_WIDTH`
+  Maximum transmitted frame width after downscaling. Smaller values reduce CPU and network usage.
+- `MONITOR_INDEX`
+  Monitor number to capture, starting from `1`.
+- `AUTH_USERNAME`
+  Login username.
+- `AUTH_PASSWORD`
+  Login password.
+- `SESSION_SECRET`
+  Cookie signing secret for browser sessions.
+- `AUDIO_SOURCE`
+  Optional PulseAudio or PipeWire monitor source. Leave empty for auto-detection.
+- `AUDIO_SAMPLE_RATE`
+  Audio sample rate. Default: `48000`.
+- `AUDIO_CHUNK_MS`
+  Audio chunk size in milliseconds for low-latency WebSocket audio. Default: `20`.
+
+### Finding the correct audio source
+
+If auto-selection chooses the wrong source, list available sources:
+
+```bash
+pactl list short sources
+```
+
+Typical monitor source example:
+
+```text
+alsa_output.pci-0000_01_00.1.hdmi-stereo.monitor
+```
+
+Then set it in `.env`:
 
 ```env
 AUDIO_SOURCE=alsa_output.pci-0000_01_00.1.hdmi-stereo.monitor
 ```
 
-## Ограничения
+### Autostart after login
 
-- На Linux самый надежный сценарий для управления мышью и клавиатурой: X11-сеанс.
-- В Wayland часть систем блокирует захват экрана или инъекцию ввода без дополнительных разрешений.
-- Звук теперь идет через WebSocket + Web Audio с маленьким буфером, поэтому задержка должна быть заметно ниже прежней потоковой схемы, но абсолютно нулевой она все равно не будет.
-- Это инструмент для доверенной локальной сети. Не публикуйте его наружу без отдельной авторизации и прокси-защиты.
+For this project, autostart after graphical login is recommended instead of starting it before login.
+
+Create the launcher:
+
+```bash
+mkdir -p ~/.local/bin
+cat > ~/.local/bin/netron-computer-start.sh <<'EOF'
+#!/bin/sh
+cd /home/netronru/Documents/Project/netron_computer
+exec /home/netronru/Documents/Project/netron_computer/.venv/bin/netron-computer
+EOF
+chmod +x ~/.local/bin/netron-computer-start.sh
+```
+
+Create the desktop autostart entry:
+
+```bash
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/netron-computer.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=netron-computer
+Exec=/home/netronru/.local/bin/netron-computer-start.sh
+X-GNOME-Autostart-enabled=true
+Terminal=false
+EOF
+```
+
+### How the controls work
+
+- Tap once: left click
+- Two-finger tap: right click
+- Drag with one finger: move the mouse like a touchpad
+- Two-finger swipe: scroll
+- `Keyboard` button: opens local on-screen keyboard and text bridge
+- `Sound` button: starts or stops audio playback in the browser
+- `Display` button: switches between available monitors when more than one monitor is connected
+
+### Performance notes
+
+- The default stream is already tuned for smoother tablet viewing:
+  - `FPS=30`
+  - `JPEG_QUALITY=45`
+  - `MAX_FRAME_WIDTH=1024`
+- Audio uses:
+  - low-latency WebSocket PCM first
+  - AAC fallback if Web Audio mode fails on the device or browser
+- True zero-latency audio and video is not possible in a browser. The goal is low latency, not perfect sync with the host display.
+
+### Security notes
+
+- This project is intended for trusted local networks.
+- There is no advanced multi-user management.
+- Do not expose it directly to the public internet without a reverse proxy, TLS, and stronger authentication.
+- Change the default `admin/admin` credentials before regular use.
+
+### Limitations
+
+- X11 works best. Wayland may block screen capture or input injection depending on the environment.
+- Audio routing depends on PipeWire or Pulse monitor availability.
+- Browser autoplay and Web Audio policies differ between Safari, Chrome, desktop, and mobile browsers.
+- Streaming video sites may still show some delay or imperfect smoothness depending on CPU, GPU, browser, Wi-Fi quality, and client-side decode performance.
+
+### Troubleshooting
+
+#### No screen
+
+- Make sure the server is running.
+- Check `DISPLAY` and graphical session access.
+- On Linux, prefer X11.
+
+#### No sound
+
+- Click the `Sound` button after the page is fully loaded.
+- Check audio source detection:
+
+```bash
+pactl list short sources
+```
+
+- Set `AUDIO_SOURCE` manually if needed.
+- Confirm that `ffmpeg` exists:
+
+```bash
+ffmpeg -version
+```
+
+#### Port already in use
+
+Change `PORT` in `.env` or stop the old process.
+
+#### Authentication changes do not apply
+
+If you changed `.env` or ran `netron-computer-set-auth`, restart the server.
+
+### Useful commands
+
+Run the app:
+
+```bash
+./.venv/bin/netron-computer
+```
+
+Change login:
+
+```bash
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass
+```
+
+Rotate login secret too:
+
+```bash
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass --rotate-session-secret
+```
+
+---
+
+## Русский
+
+### Описание
+
+`netron-computer` — это локальный браузерный сервис для удаленного просмотра экрана Linux-компьютера и управления им с планшета, телефона или другого компьютера по локальной сети.
+
+Проект ориентирован на:
+
+- локальный доступ через браузер на порту `3001`
+- простой fullscreen-интерфейс
+- управление мышью как тачпадом
+- ввод текста из браузера
+- передачу звука из компьютера в браузер
+- базовую защиту логином и паролем
+- переключение между несколькими мониторами
+
+Лучший сценарий использования — доверенная домашняя или офисная локальная сеть.
+
+### Основные возможности
+
+- Передача выбранного монитора в браузер в виде JPEG-кадров.
+- Полноэкранный стиль интерфейса для телефона или планшета.
+- Управление в стиле тачпада:
+  - один палец — движение курсора
+  - один тап — левый клик
+  - тап двумя пальцами — правый клик
+  - свайп двумя пальцами — прокрутка
+- Белая точка-курсор на стороне клиента.
+- Кнопка `Keyboard`, которая открывает клавиатуру только вручную.
+- Кнопка `Sound`, которая включает и выключает передачу звука с компьютера в браузер.
+- Кнопка `Display`, которая появляется при наличии нескольких мониторов и переключает активный экран.
+- Авторизация по логину и паролю.
+- Возможность менять логин и пароль через `.env` или отдельную CLI-команду.
+
+### Требования
+
+- Linux с графической сессией
+- Python `3.11+`
+- Желательно X11 для лучшего захвата экрана и управления вводом
+- PipeWire или PulseAudio для системного звука
+- `ffmpeg` в `PATH`
+
+### Установка
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+python3 -m venv .venv
+./.venv/bin/python -m ensurepip --upgrade
+./.venv/bin/pip install -e .
+cp .env.example .env
+```
+
+### Запуск
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer
+```
+
+Открыть локально:
+
+```text
+http://127.0.0.1:3001
+```
+
+Открыть с планшета или телефона в той же локальной сети:
+
+```text
+http://IP_ВАШЕГО_КОМПЬЮТЕРА:3001
+```
+
+### Логин по умолчанию
+
+```text
+username: admin
+password: admin
+```
+
+### Как поменять username и password
+
+Есть два штатных способа.
+
+#### Вариант 1: вручную через `.env`
+
+```env
+AUTH_USERNAME=your_login
+AUTH_PASSWORD=your_password
+```
+
+После этого нужно перезапустить сервер.
+
+#### Вариант 2: через встроенную команду
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass
+```
+
+Если хотите сразу обновить и `SESSION_SECRET`:
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass --rotate-session-secret
+```
+
+Потом тоже нужен перезапуск приложения.
+
+### Конфигурация
+
+Пример `.env`:
+
+```env
+HOST=0.0.0.0
+PORT=3001
+FPS=30
+JPEG_QUALITY=45
+MAX_FRAME_WIDTH=1024
+MONITOR_INDEX=1
+AUTH_USERNAME=admin
+AUTH_PASSWORD=admin
+SESSION_SECRET=change-this-netron-computer-secret
+AUDIO_SOURCE=
+AUDIO_SAMPLE_RATE=48000
+AUDIO_CHUNK_MS=20
+```
+
+### Что означает каждый параметр
+
+- `HOST`
+  Адрес привязки сервера. `0.0.0.0` открывает доступ в локальной сети.
+- `PORT`
+  Порт HTTP-сервера. По умолчанию `3001`.
+- `FPS`
+  Целевой FPS потока экрана. По умолчанию `30`.
+- `JPEG_QUALITY`
+  Качество JPEG-кадров. Чем ниже значение, тем меньше нагрузка и трафик, но хуже изображение.
+- `MAX_FRAME_WIDTH`
+  Максимальная ширина передаваемого кадра после уменьшения.
+- `MONITOR_INDEX`
+  Номер монитора для захвата, начиная с `1`.
+- `AUTH_USERNAME`
+  Логин для входа.
+- `AUTH_PASSWORD`
+  Пароль для входа.
+- `SESSION_SECRET`
+  Секрет подписи cookie-сессии.
+- `AUDIO_SOURCE`
+  Источник системного звука PulseAudio или PipeWire monitor. Если пусто, используется автоопределение.
+- `AUDIO_SAMPLE_RATE`
+  Частота дискретизации звука. По умолчанию `48000`.
+- `AUDIO_CHUNK_MS`
+  Размер аудиочанка в миллисекундах для low-latency WebSocket-звука. По умолчанию `20`.
+
+### Как найти правильный источник звука
+
+Если автопоиск берет не тот источник:
+
+```bash
+pactl list short sources
+```
+
+Пример monitor-источника:
+
+```text
+alsa_output.pci-0000_01_00.1.hdmi-stereo.monitor
+```
+
+После этого можно прописать его в `.env`:
+
+```env
+AUDIO_SOURCE=alsa_output.pci-0000_01_00.1.hdmi-stereo.monitor
+```
+
+### Автозапуск после входа в систему
+
+Для этого проекта лучше использовать автозапуск после входа в графическую сессию, а не системный ранний старт.
+
+Создайте launcher:
+
+```bash
+mkdir -p ~/.local/bin
+cat > ~/.local/bin/netron-computer-start.sh <<'EOF'
+#!/bin/sh
+cd /home/netronru/Documents/Project/netron_computer
+exec /home/netronru/Documents/Project/netron_computer/.venv/bin/netron-computer
+EOF
+chmod +x ~/.local/bin/netron-computer-start.sh
+```
+
+Создайте запись автозапуска:
+
+```bash
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/netron-computer.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=netron-computer
+Exec=/home/netronru/.local/bin/netron-computer-start.sh
+X-GNOME-Autostart-enabled=true
+Terminal=false
+EOF
+```
+
+### Как работает управление
+
+- Один тап: левый клик
+- Тап двумя пальцами: правый клик
+- Перемещение одним пальцем: движение мыши как на тачпаде
+- Свайп двумя пальцами: прокрутка
+- Кнопка `Keyboard`: открыть клавиатуру и ввод текста
+- Кнопка `Sound`: включить или выключить передачу звука
+- Кнопка `Display`: переключить активный монитор, если подключено несколько экранов
+
+### Производительность
+
+- По умолчанию проект уже настроен под более плавный просмотр на планшете:
+  - `FPS=30`
+  - `JPEG_QUALITY=45`
+  - `MAX_FRAME_WIDTH=1024`
+- Для звука используется:
+  - сначала low-latency WebSocket PCM
+  - затем AAC fallback, если Web Audio не сработал на устройстве или в браузере
+- Абсолютно нулевой задержки в браузере не бывает. Цель проекта — сделать задержку как можно меньше, а не сделать физически идеальную синхронизацию с экраном хоста.
+
+### Безопасность
+
+- Проект рассчитан на доверенную локальную сеть.
+- Полноценной многопользовательской системы здесь нет.
+- Не публикуйте его напрямую в интернет без reverse proxy, TLS и более сильной авторизации.
+- Обязательно поменяйте дефолтные `admin/admin` перед постоянным использованием.
+
+### Ограничения
+
+- Лучше всего работает под X11.
+- В Wayland захват экрана или управление вводом может быть ограничено окружением.
+- Передача звука зависит от доступности PipeWire или Pulse monitor source.
+- Политики autoplay и Web Audio отличаются между Safari, Chrome, desktop и mobile.
+- Видео вроде YouTube может все равно иметь некоторую задержку или неидеальную плавность в зависимости от CPU, GPU, браузера, качества Wi-Fi и возможностей декодирования на клиенте.
+
+### Диагностика проблем
+
+#### Нет изображения
+
+- Убедитесь, что сервер запущен.
+- Проверьте доступ к графической сессии.
+- На Linux лучше использовать X11.
+
+#### Нет звука
+
+- Нажмите кнопку `Sound` после полной загрузки страницы.
+- Посмотрите список доступных источников:
+
+```bash
+pactl list short sources
+```
+
+- Если нужно, задайте `AUDIO_SOURCE` вручную.
+- Убедитесь, что `ffmpeg` установлен:
+
+```bash
+ffmpeg -version
+```
+
+#### Порт занят
+
+Измените `PORT` в `.env` или остановите старый процесс.
+
+#### Логин и пароль не меняются
+
+После изменения `.env` или запуска команды `netron-computer-set-auth` нужно перезапустить сервер.
+
+### Полезные команды
+
+Запуск приложения:
+
+```bash
+./.venv/bin/netron-computer
+```
+
+Смена логина и пароля:
+
+```bash
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass
+```
+
+Смена логина и пароля с обновлением секретного ключа сессии:
+
+```bash
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass --rotate-session-secret
+```
+
+---
+
+## Español
+
+### Descripción general
+
+`netron-computer` es un visor remoto de escritorio autoalojado para uso local, diseñado para controlar rápidamente una computadora Linux desde una tableta, un teléfono u otra computadora a través de una red local.
+
+Se centra en:
+
+- acceso local desde el navegador en el puerto `3001`
+- una interfaz simple en pantalla completa
+- control del ratón estilo touchpad
+- entrada de texto opcional desde el navegador
+- reenvío opcional de audio
+- protección básica con usuario y contraseña
+- soporte para cambiar entre varios monitores
+
+Este proyecto está pensado principalmente para redes LAN domésticas u oficinas de confianza.
+
+### Funciones principales
+
+- Transmite el monitor seleccionado al navegador como cuadros JPEG.
+- Soporta una experiencia de visualización estilo pantalla completa en navegadores móviles y tabletas.
+- Soporta control estilo touchpad:
+  - un dedo para mover el cursor
+  - un toque con un dedo para clic izquierdo
+  - toque con dos dedos para clic derecho
+  - deslizamiento con dos dedos para desplazamiento
+- Muestra un punto blanco de cursor en la interfaz del cliente.
+- Incluye un botón `Keyboard` para abrir el teclado en pantalla solo cuando hace falta.
+- Incluye un botón `Sound` para iniciar o detener el audio de la computadora en el navegador.
+- Incluye un botón `Display` cuando hay varios monitores conectados.
+- Protege el acceso con autenticación por usuario y contraseña.
+- Permite cambiar las credenciales mediante `.env` o mediante un comando CLI dedicado.
+
+### Requisitos
+
+- Sesión gráfica de Linux
+- Python `3.11+`
+- Se recomienda mucho X11 para un mejor comportamiento de captura e inyección de entrada
+- Se recomienda PipeWire o PulseAudio para reenviar el audio del sistema
+- `ffmpeg` instalado y disponible en `PATH`
+
+### Instalación
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+python3 -m venv .venv
+./.venv/bin/python -m ensurepip --upgrade
+./.venv/bin/pip install -e .
+cp .env.example .env
+```
+
+### Ejecución
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer
+```
+
+Abrir localmente:
+
+```text
+http://127.0.0.1:3001
+```
+
+Abrir desde otro dispositivo en la misma red local:
+
+```text
+http://IP_LOCAL_DE_TU_COMPUTADORA:3001
+```
+
+### Inicio de sesión por defecto
+
+```text
+username: admin
+password: admin
+```
+
+### Cómo cambiar el username y el password
+
+Hay dos formas soportadas.
+
+#### Opción 1: editar `.env`
+
+```env
+AUTH_USERNAME=your_login
+AUTH_PASSWORD=your_password
+```
+
+Reinicia el servidor después de editar el archivo.
+
+#### Opción 2: usar el comando auxiliar
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass
+```
+
+Si además quieres rotar el secreto de firma de cookies:
+
+```bash
+cd /home/netronru/Documents/Project/netron_computer
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass --rotate-session-secret
+```
+
+Después reinicia la aplicación.
+
+### Configuración
+
+Ejemplo de `.env`:
+
+```env
+HOST=0.0.0.0
+PORT=3001
+FPS=30
+JPEG_QUALITY=45
+MAX_FRAME_WIDTH=1024
+MONITOR_INDEX=1
+AUTH_USERNAME=admin
+AUTH_PASSWORD=admin
+SESSION_SECRET=change-this-netron-computer-secret
+AUDIO_SOURCE=
+AUDIO_SAMPLE_RATE=48000
+AUDIO_CHUNK_MS=20
+```
+
+### Referencia de configuración
+
+- `HOST`
+  Dirección de enlace del servidor. `0.0.0.0` expone el servicio a la red local.
+- `PORT`
+  Puerto HTTP. Valor por defecto: `3001`.
+- `FPS`
+  Frecuencia objetivo del flujo de pantalla. Valor por defecto: `30`.
+- `JPEG_QUALITY`
+  Calidad de compresión JPEG para los cuadros de pantalla. Valores más bajos reducen el ancho de banda pero también reducen la calidad de imagen.
+- `MAX_FRAME_WIDTH`
+  Ancho máximo del cuadro transmitido después de redimensionarlo. Valores más pequeños reducen el uso de CPU y red.
+- `MONITOR_INDEX`
+  Número del monitor a capturar, comenzando desde `1`.
+- `AUTH_USERNAME`
+  Usuario de acceso.
+- `AUTH_PASSWORD`
+  Contraseña de acceso.
+- `SESSION_SECRET`
+  Secreto para firmar las cookies de sesión del navegador.
+- `AUDIO_SOURCE`
+  Fuente monitor opcional de PulseAudio o PipeWire. Déjalo vacío para detección automática.
+- `AUDIO_SAMPLE_RATE`
+  Frecuencia de muestreo de audio. Valor por defecto: `48000`.
+- `AUDIO_CHUNK_MS`
+  Tamaño del bloque de audio en milisegundos para audio WebSocket de baja latencia. Valor por defecto: `20`.
+
+### Cómo encontrar la fuente de audio correcta
+
+Si la selección automática elige la fuente equivocada, lista las fuentes disponibles:
+
+```bash
+pactl list short sources
+```
+
+Ejemplo típico de fuente monitor:
+
+```text
+alsa_output.pci-0000_01_00.1.hdmi-stereo.monitor
+```
+
+Luego configúrala en `.env`:
+
+```env
+AUDIO_SOURCE=alsa_output.pci-0000_01_00.1.hdmi-stereo.monitor
+```
+
+### Inicio automático después de iniciar sesión
+
+Para este proyecto se recomienda el inicio automático después de entrar en la sesión gráfica, no antes.
+
+Crea el launcher:
+
+```bash
+mkdir -p ~/.local/bin
+cat > ~/.local/bin/netron-computer-start.sh <<'EOF'
+#!/bin/sh
+cd /home/netronru/Documents/Project/netron_computer
+exec /home/netronru/Documents/Project/netron_computer/.venv/bin/netron-computer
+EOF
+chmod +x ~/.local/bin/netron-computer-start.sh
+```
+
+Crea la entrada de autostart:
+
+```bash
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/netron-computer.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=netron-computer
+Exec=/home/netronru/.local/bin/netron-computer-start.sh
+X-GNOME-Autostart-enabled=true
+Terminal=false
+EOF
+```
+
+### Cómo funcionan los controles
+
+- Un toque: clic izquierdo
+- Toque con dos dedos: clic derecho
+- Movimiento con un dedo: mover el ratón como un touchpad
+- Deslizamiento con dos dedos: desplazamiento
+- Botón `Keyboard`: abre el teclado local y el puente de texto
+- Botón `Sound`: inicia o detiene el audio en el navegador
+- Botón `Display`: cambia entre los monitores disponibles cuando hay más de uno conectado
+
+### Notas de rendimiento
+
+- El flujo por defecto ya está ajustado para una visualización más fluida en tabletas:
+  - `FPS=30`
+  - `JPEG_QUALITY=45`
+  - `MAX_FRAME_WIDTH=1024`
+- El audio usa:
+  - primero PCM de baja latencia por WebSocket
+  - flujo AAC de respaldo si el modo Web Audio falla en el dispositivo o navegador
+- No es posible lograr latencia cero real para audio y video en un navegador. El objetivo es una latencia baja, no una sincronización perfecta con la pantalla del host.
+
+### Notas de seguridad
+
+- Este proyecto está pensado para redes locales de confianza.
+- No existe un sistema avanzado de múltiples usuarios.
+- No lo expongas directamente a Internet sin reverse proxy, TLS y una autenticación más fuerte.
+- Cambia las credenciales por defecto `admin/admin` antes de usarlo de forma habitual.
+
+### Limitaciones
+
+- X11 funciona mejor. Wayland puede bloquear la captura de pantalla o la inyección de entrada según el entorno.
+- El enrutamiento de audio depende de la disponibilidad de monitores de PipeWire o Pulse.
+- Las políticas de autoplay y Web Audio cambian entre Safari, Chrome, navegadores de escritorio y móviles.
+- Los sitios de video en streaming todavía pueden mostrar algo de retraso o una fluidez imperfecta según la CPU, GPU, navegador, calidad del Wi-Fi y rendimiento de decodificación del cliente.
+
+### Solución de problemas
+
+#### No hay imagen
+
+- Asegúrate de que el servidor esté en ejecución.
+- Verifica `DISPLAY` y el acceso a la sesión gráfica.
+- En Linux, es preferible usar X11.
+
+#### No hay sonido
+
+- Pulsa el botón `Sound` después de que la página se cargue por completo.
+- Comprueba la detección de fuentes de audio:
+
+```bash
+pactl list short sources
+```
+
+- Configura `AUDIO_SOURCE` manualmente si hace falta.
+- Confirma que `ffmpeg` esté instalado:
+
+```bash
+ffmpeg -version
+```
+
+#### El puerto ya está en uso
+
+Cambia `PORT` en `.env` o detén el proceso anterior.
+
+#### Los cambios de autenticación no se aplican
+
+Si cambiaste `.env` o ejecutaste `netron-computer-set-auth`, reinicia el servidor.
+
+### Comandos útiles
+
+Ejecutar la aplicación:
+
+```bash
+./.venv/bin/netron-computer
+```
+
+Cambiar el login:
+
+```bash
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass
+```
+
+Rotar también el secreto de sesión:
+
+```bash
+./.venv/bin/netron-computer-set-auth --username myuser --password mypass --rotate-session-secret
+```

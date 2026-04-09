@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NTRN
+Comment=Desktop controller for NTRN screen sharing
+Exec=netron-computer-desktop
+Icon=ntrn
+StartupWMClass=NTRN
+Terminal=false
+Categories=Network;Utility;
+StartupNotify=true
