@@ -1,0 +1,2 @@
+[console_scripts]
+netron-computer = netron_computer.app:main

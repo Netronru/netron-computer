@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>netron-computer</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body class="viewer-page">
+    <main id="viewport" class="viewer" aria-label="Remote screen">
+      <img id="screenImage" alt="Screen stream" draggable="false" />
+      <textarea
+        id="keyboardBridge"
+        class="keyboard-bridge"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+      ></textarea>
+      <audio id="audioPlayer" class="audio-player" playsinline></audio>
+      <div id="cursorDot" class="cursor-dot hidden" aria-hidden="true"></div>
+      <div id="screenOverlay" class="viewer-overlay">
+        Connecting to the remote screen...
+      </div>
+    </main>
+    <div id="leftControls" class="floating-controls floating-controls-left hidden">
+      <button id="monitorButton" class="floating-button" type="button">Display</button>
+    </div>
+    <div class="floating-controls">
+      <button id="soundButton" class="floating-button" type="button">Sound</button>
+      <button id="keyboardButton" class="floating-button" type="button">Keyboard</button>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netron-computer"
+version = "0.1.0"
+description = "Local browser-based computer screen streaming with WebSocket control."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116,<1.0",
+  "mss>=10.1,<11.0",
+  "pillow>=11.2,<12.0",
+  "pynput>=1.7,<2.0",
+  "python-dotenv>=1.1,<2.0",
+  "uvicorn[standard]>=0.35,<1.0",
+]
+
+[project.scripts]
+netron-computer = "netron_computer.app:main"
+netron-computer-set-auth = "netron_computer.configure_auth:main"
+
+[tool.setuptools.packages.find]
+include = ["netron_computer*"]

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Login | netron-computer</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <form class="login-card" method="post" action="/login">
+        <h1>netron-computer</h1>
+        <p class="login-copy">Sign in to open the remote screen.</p>
+        <label class="login-label" for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required />
+        <label class="login-label" for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <button class="login-button" type="submit">Login</button>
+      </form>
+    </main>
+    <script>
+      var hasError = /(?:\?|&)error=1(?:&|$)/.test(window.location.search);
+      if (hasError) {
+        var note = document.createElement("p");
+        note.className = "login-error";
+        note.textContent = "Invalid username or password";
+        document.querySelector(".login-card").appendChild(note);
+      }
+    </script>
+  </body>
+</html>

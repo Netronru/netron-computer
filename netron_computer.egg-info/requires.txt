@@ -1,0 +1,6 @@
+fastapi<1.0,>=0.116
+mss<11.0,>=10.1
+pillow<12.0,>=11.2
+pynput<2.0,>=1.7
+python-dotenv<2.0,>=1.1
+uvicorn[standard]<1.0,>=0.35
